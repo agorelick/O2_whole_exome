@@ -1,4 +1,6 @@
-# 0. Introduction to the O2 cluster
+# Prerequisites
+
+## O2 cluster:
 O2 is a platform for Linux-based high-performance computing at Harvard Medical School. This is the main compute cluster used by the Naxerova Lab at HMS. For reasons of HIPAA compliance and practicality, all “raw” sequencing data should be stored and processed on O2. (Note, “raw” sequencing data refers to sequencing-read-level files like FASTQs, BAMs, SAMs, etc.) Raw sequencing data should never be stored on Dropbox, Google Drive, or other cloud platforms. 
 
 Common operations on raw sequencing data (like mutation calling, copy number profiling, etc.) typically also require large reference data files, which should also be kept on O2. Such reference files may include a version of the human reference genome; and databases of human genetic variation (e.g., common SNPs from gnomAD, dbSNP, 1000 genomes, etc.) As a rule of thumb, all sequencing data that is not processed to the point that you would load into R or open in Excel on a laptop should be worked with on O2. 
@@ -9,6 +11,24 @@ To use O2, you will need to register for an account. Instructions are on the O2 
 *	you will need to request that your O2 user be added to the “naxerova” user group. This is necessary for your new user to access the lab’s shared directory on O2 for big data files, which is located at /n/data1/hms/genetics/naxerova/lab/. To request this, submit a ticket on the HMS IT webite (https://harvardmed.service-now.com/stat). _Example ticket description:_ "Hello, I am a postdoc in the Naxerova lab in Department of Genetics at HMS. My account on o2 was recently set up (my username is alg2264). Please add my user to the “naxerova” group, so that I can access our shared data directory at /n/data1/hms/genetics/naxerova/lab. Thank you."
 * Create a “scratch” directory (a folder designed for many/large temporarily files that should not be backed up). To create your own scratch directory on O2, please run the following command from a login node (not an interactive job): /n/cluster/bin/scratch_create_directory.sh See: https://harvardmed.atlassian.net/wiki/spaces/O2/pages/2652045313/Scratch+Storage
 
+# 0. Getting setup with exome pipeline on O2
+
+## Log onto the O2 cluster in a termimal. 
+On Mac/Linux, you can do this in a terminal app. On all operating systems, you can do this within a web browser. Direct your browser to https://o2portal.rc.hms.harvard.edu/pun/sys/dashboard. Then click "Clusters > O2 Cluster Terminal"
+
+<img width="1101" alt="Screenshot 2024-12-02 at 10 50 41 AM" src="https://github.com/user-attachments/assets/4836b378-d7a2-4e36-85ba-150eaca309be">
+
+```
+# log onto O2 via ssh
+ssh alg2264@o2.hms.harvard.edu
+```
+
+## clone this GitHub repository 
+Once on O2, you can clone this entire directory to O2. This generates a copy of every file in the repo to a given location. You will then copy the scripts in this repo to new locations, edit them for your data as described below, and then submit the scripts on O2's job scheduler, slurm.
+```
+cd /path/to/desired/location
+git clone https://github.com/agorelick/O2_whole_exome 
+```
 
 # 1. QC your FASTQ files 
 Before pre-processing your FASTQ files, you can generate a QC report for each file using the commonly used tool FASTQC (www.bioinformatics.babraham.ac.uk/projects/fastqc/). This URL also provides examples of "good" reports and "bad" reports with common problems to aid in your interpretation. 
