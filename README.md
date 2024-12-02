@@ -60,4 +60,59 @@ The slurm script `run_preprocessing.sh` provides the steps to preprocess sequenc
 ## Re-running run_preprocessing.sh after the job failed
 To avoid re-running earlier successful commands in the `run_preprocessing.sh` script, at each step I include logic that checks if the expected output exists before running the command. This way, a sample's job can be resumed mid-way without re-running time-intensive tasks (like bwa). However, this means that if a command fails but generates an output file anyway, the output file must be deleted before that step (and the following steps) can be re-run. If a job fails, make sure you identify where the failure started (in the slurm ".out" output/log file). Then delete the output from that failed job and any subsequent jobs that also failed.
 
+## Edits to make in run_preprocessing.sh for your data
+```#!/bin/bash
+#SBATCH -c 20           # number of cores requested for each sample. Can be changed, but it should align with all core numbers specified in the commands below
+#SBATCH -t 0-4:00       # ~24-36hrs for each Exome sample. ~12hrs for lpWGS samples (~1x)
+#SBATCH -p short        # > 12 hrs requires "medium" queue, <= 12 hrs can be on "short" queue
+#SBATCH --mem 16000     # memory requested for each sample in Mb
+#SBATCH --array=0-2     # this should be a 0-indexed array with a length equal to the number of samples. Here: "0,1,2" for 3 samples
+#SBATCH -o run_preprocessing_%A_%a.out
+#SBATCH --mail-user=alexander_gorelick@hms.harvard.edu  # Replace with your email address. Slurm notifications will be emailed here
+#SBATCH --mail-type=ALL
+
+# paths for output files.
+cutadapt_path='/n/data1/hms/genetics/naxerova/lab/alex/example_patient/cutadapt'
+preprocessing_path='/n/data1/hms/genetics/naxerova/lab/alex/example_patient/preprocessing'
+bam_path='/n/data1/hms/genetics/naxerova/lab/alex/example_patient/bams'
+
+# path to the human reference genome. Here, version GRCh38 (aka hg38).
+# To use with bwa mem (for alignment of fastq files), this must first be indexed using BWAIndex/version0.6.0 (needs to be greater than 0.5.* for bwa>=0.7)
+reference='/n/data1/hms/genetics/naxerova/lab/alex/reference_data/assemblies/Homo_sapiens_NCBI_GRCh38/NCBI/GRCh38/Sequence/BWAIndex/genome.fa'
+
+# path to a database of common SNPs for the appropriate reference genome version (required for
+polymorphic_sites='/n/data1/hms/genetics/naxerova/lab/alex/reference_data/dbSNP/dbSNP_GRCh38/00-common_all_renamedchrs.vcf.gz'
+
+# path to a directory where many large temporary files can safetly be written. On O2, this is best done in your "scratch" directory (see O2 wiki for instructions to create this directory).
+tmpdir='/n/scratch/users/a/alg2264/'
+
+# adapter sequences based on library prep.
+# the sequences here are for "Illumina universal adapter sequences" used for both Twist Human Core Exome kits and Illumina TruSeq kits (the WES and lpWGS kits used by Azenta respectively)
+# If you aren't sure what adapter sequence was used, check the output of fastqc.
+adapter_seq_R1='AGATCGGAAGAGCACACGTCTGAACTCCAGTCA'
+adapter_seq_R2='AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT'
+
+# Original FASTQ file suffices+extensions
+suffix_R1='_R1_001.fastq.gz'
+suffix_R2='_R2_001.fastq.gz'
+
+# update this array with the "prefix" for each sample's FASTQ data files.
+# Example: if you have paired-end FASTQ files "path/s1_R1_001.fastq.gz" and "path/s1_R2_001.fastq.gz" for a sample "s1", the prefix should be "path/s1"
+declare -a fq_prefices=(
+    "/n/data1/hms/genetics/naxerova/lab/alex/azenta/30-1098079507_BR3_lpWGS/00_fastq/1A"
+    "/n/data1/hms/genetics/naxerova/lab/alex/azenta/30-1098079507_BR3_lpWGS/00_fastq/1B"
+    "/n/data1/hms/genetics/naxerova/lab/alex/azenta/30-1098079507_BR3_lpWGS/00_fastq/3B")
+
+# update this array with the name for each sample in the order of the FASTQ prefices.
+declare -a samples=("Liv1a-A" "Liv1b-A" "N1")
+```
+
+## Run preprocessing pipeline as a slurm job
+```
+# submit the job to slurm
+sbatch run_preprocessing.sh
+
+# check the status of the job (alg2264 is my O2 username)
+squeue -u alg2264
+```
 
