@@ -11,8 +11,11 @@ To use O2, you will need to register for an account. Instructions are on the O2 
 
 
 # 1. QC your FASTQ files 
-Before pre-processing your FASTQ files, you can generate a QC report for each file using the commonly used tool FASTQC (www.bioinformatics.babraham.ac.uk/projects/fastqc/). This URL also provides examples of "good" reports and "bad" reports with common problems to aid in your interpretation. To run FASTQC on your data, use the `run_fastqc.sh` script included in this directory. Copy this file to a new file for your current data. Make the following edits:
+Before pre-processing your FASTQ files, you can generate a QC report for each file using the commonly used tool FASTQC (www.bioinformatics.babraham.ac.uk/projects/fastqc/). This URL also provides examples of "good" reports and "bad" reports with common problems to aid in your interpretation. 
 
+## Prepare FASTQC slurm script for your data
+
+To run FASTQC on your data, use the `run_fastqc.sh` script included in this directory. Copy this file to a new file for your current data. Make the following edits:
 ```
 ## Adjust the run time for your number of fastq files (x2 the number of samples for paired reads). NB: 4 ~1Gb fastq files (running in parallel on 4 cores) takes ~ 5 min to complete.
 #SBATCH -t 0-01:00
@@ -30,6 +33,16 @@ fastqc_dir="/n/data1/hms/genetics/naxerova/lab/alex/example_patient/fastqc"
 tmpdir='/n/scratch/users/a/alg2264/
 ```
 
+## Run FASTQC as a slurm job
+```
+# submit the job to slurm
+sbatch run_fastqc.sh
+
+# check the status of the job (alg2264 is my O2 username)
+squeue -u alg2264
+```
+
+## Download/inspect QC results
 When FASTQC has finished, copy the resulting directory to your local computer to view the results. From a terminal on your local computer, use `scp` to copy the entire fastqc directory. 
 ```
 # run on your local laptop/desktop
@@ -37,3 +50,14 @@ When FASTQC has finished, copy the resulting directory to your local computer to
 scp -r alg2264@transfer.rc.hms.harvard.edu:/n/data1/hms/genetics/naxerova/lab/alex/example_patient/fastqc example_fastqc
 ```
 Then you can open the fastqc directory (here, `example_fastqc`) and view a file's results (.html files) in a web browser. For information about how to interpret these results, see: https://www.bioinformatics.babraham.ac.uk/projects/fastqc/
+
+
+# 2. Run preprocessing pipeline on data
+
+## General workflow
+The slurm script `run_preprocessing.sh` provides the steps to preprocess sequencing data using GATK's best practices for variant discovery https://gatk.broadinstitute.org/hc/en-us/articles/360035535912-Data-pre-processing-for-variant-discovery. I tried to strike a balance between keeping the script simple and also automating as much as possible. The workflow I settled on is to run this script for a single patient at a time, in which all samples for the patient will be processed in parallel. As such, for each new patient, I copy the `run_preprocessing.sh` into a new file and edit the files/information in it for the new specific patient. NB: If later on you have more samples for the same patient, just add their fastq files and sample-names to the file, adjust the `array` argument for the newly added samples, and re-run the script on slurm.
+
+## Re-running run_preprocessing.sh after the job failed
+To avoid re-running earlier successful commands in the `run_preprocessing.sh` script, at each step I include logic that checks if the expected output exists before running the command. This way, a sample's job can be resumed mid-way without re-running time-intensive tasks (like bwa). However, this means that if a command fails but generates an output file anyway, the output file must be deleted before that step (and the following steps) can be re-run. If a job fails, make sure you identify where the failure started (in the slurm ".out" output/log file). Then delete the output from that failed job and any subsequent jobs that also failed.
+
+
